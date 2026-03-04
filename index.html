@@ -150,8 +150,7 @@
                             
                             <div>
                                 <label class="block text-sm font-semibold mb-1 text-slate-600">PPS แรกรับ (%)</label>
-                                <select name="baselinePPS" class="form-input pps-select">
-                                    </select>
+                                <select name="baselinePPS" class="form-input pps-select"></select>
                             </div>
 
                             <div class="md:col-span-2"><label class="block text-sm font-semibold mb-1 text-slate-600">โรคประจำตัว (Diagnosis)</label><input type="text" name="diagnosis" class="form-input" required></div>
@@ -279,9 +278,28 @@
                     <div class="grid grid-cols-1 md:grid-cols-12 gap-4 bg-slate-50 p-6 rounded-xl border border-slate-100">
                         <div class="md:col-span-3"><label class="block text-sm font-bold text-black-700 mb-2">วันที่</label><input type="date" id="visitDate" class="form-input" required></div>
                         <div class="md:col-span-2"><label class="block text-sm font-bold text-black-700 mb-2">เวลา (นาที)</label><input type="number" id="visitDuration" class="form-input"></div>
-                        <div class="md:col-span-3"><label class="block text-sm font-bold text-red-600 mb-1">Pain (0-10)</label><div class="flex items-center gap-2 bg-white p-2 rounded border"><input type="range" id="visitPainScore" min="0" max="10" class="w-full accent-red-500" oninput="document.getElementById('pv').innerText=this.value"><span id="pv" class="font-bold text-red-600 text-lg">0</span></div></div>
+                        
+                        <div class="md:col-span-3">
+                            <label class="block text-sm font-bold text-red-600 mb-1">Pain (0-10)</label>
+                            <select id="visitPainScore" class="form-input text-red-600 font-bold">
+                                <option value="">ไม่มีข้อมูล</option>
+                                <option value="0">0</option><option value="1">1</option><option value="2">2</option>
+                                <option value="3">3</option><option value="4">4</option><option value="5">5</option>
+                                <option value="6">6</option><option value="7">7</option><option value="8">8</option>
+                                <option value="9">9</option><option value="10">10</option>
+                            </select>
+                        </div>
+                        
                         <div class="md:col-span-2"><label class="block text-sm font-bold text-red-600 mb-1">PPS%</label><select id="visitPPS" class="form-input pps-select"></select></div>
-                        <div class="md:col-span-2"><label class="block text-sm font-bold text-red-600 mb-1">ECOG</label><select id="visitECOG" class="form-input"><option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option></select></div>
+                        
+                        <div class="md:col-span-2">
+                            <label class="block text-sm font-bold text-red-600 mb-1">ECOG</label>
+                            <select id="visitECOG" class="form-input">
+                                <option value="">ไม่มีข้อมูล</option>
+                                <option value="0">0</option><option value="1">1</option>
+                                <option value="2">2</option><option value="3">3</option><option value="4">4</option>
+                            </select>
+                        </div>
                     </div>
 
                     <div class="grid md:grid-cols-2 gap-6">
@@ -334,7 +352,7 @@
 
                     <div class="grid md:grid-cols-2 gap-6">
                         <div><label class="block text-sm font-bold text-black-700 mb-2">แนบไฟล์</label><input type="file" id="visitFile" class="text-sm text-slate-500 w-full border rounded p-2 bg-white"></div>
-                        <div><label class="block text-sm font-bold text-black-700 mb-2">หมายเหตุ</label><input type="text" id="visitNotes" class="form-input"></div>
+                        <div><label class="block text-sm font-bold text-black-700 mb-2">ระยะเวลาการบริบาล (นาที)</label><input type="text" id="visitNotes" class="form-input"></div>
                     </div>
                 </form>
             </div>
@@ -356,7 +374,7 @@
         // ********************************************************************************
         // ⚠️ ใส่ URL Web App ของคุณที่นี่
         // ********************************************************************************
-        const API_URL = 'https://script.google.com/macros/s/AKfycbyqW6I_IA30vfeODi0EpFwHWxz--EZUGqt4dIjCWQlQyqo45lbyIWYCws7vCYsGmgJ-/exec'; 
+        const API_URL = 'https://script.google.com/macros/s/AKfycbz6_mEzKjsSMHuol_k8SJvXwuFxLAm4oeaj_2YxBL-KJufYB5pKSO3Zj8U_ETDlkfjo/exec'; 
 
         async function fetchAPI(action, data = {}) {
             const options = { method: 'POST', body: JSON.stringify({ action, ...data }) };
@@ -367,11 +385,8 @@
         let currentUser = null, currentPatient = null, allPatients = [], painChartInstance = null, dashChartInstance = null;
         let currentVisitsData = [];
 
-        // --- INIT & UTILS ---
         window.addEventListener('DOMContentLoaded', () => {
-             // Generate PPS Options for all selectors
-             const ppsOptions = `<option value="">ไม่มีข้อมูล</option>` + 
-                                [100, 90, 80, 70, 60, 50, 40, 30, 20, 10, 0].map(v => `<option value="${v}">${v}</option>`).join('');
+             const ppsOptions = `<option value="">ไม่มีข้อมูล</option>` + [100, 90, 80, 70, 60, 50, 40, 30, 20, 10, 0].map(v => `<option value="${v}">${v}</option>`).join('');
              document.querySelectorAll('.pps-select').forEach(el => el.innerHTML = ppsOptions);
         });
 
@@ -383,7 +398,6 @@
             document.getElementById(displayId).value = Math.abs(ageDate.getUTCFullYear() - 1970);
         }
 
-        // --- LOGIN & NAVIGATION ---
         document.getElementById('loginForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             const btn = document.getElementById('loginBtn'), loader = document.getElementById('loginLoader');
@@ -414,12 +428,10 @@
             if(tabId === 'dashboard') loadDashboard();
         }
 
-        // --- PATIENT MANAGEMENT ---
         document.getElementById('addPatientForm').addEventListener('submit', async (e) => {
             e.preventDefault(); Swal.showLoading();
             try {
                 const res = await fetchAPI('addPatient', Object.fromEntries(new FormData(e.target)));
-                // Update: Show specific error for Duplicate HN
                 if(res.success) { Swal.fire('Success', 'บันทึกสำเร็จ', 'success'); e.target.reset(); document.getElementById('reg_age_display').value=''; loadAllPatients(); }
                 else Swal.fire('Error', res.message, 'error');
             } catch(e) { Swal.fire('Error', e.message, 'error'); }
@@ -461,7 +473,6 @@
             document.getElementById('detailDx').innerText = p.diagnosis;
             document.getElementById('detailHistorySummary').innerText = p.historySummary || '-';
             
-            // Calculate Age for Detail
             if(p.dob) {
                 const age = new Date(Date.now() - new Date(p.dob).getTime()).getUTCFullYear() - 1970;
                 document.getElementById('detailAge').innerText = `${age} ปี (${p.dob})`;
@@ -478,14 +489,14 @@
             if(res.success && res.data.length > 0) {
                 currentVisitsData = res.data;
                 res.data.forEach((v, index) => {
-                    const painClass = v.painScore >= 7 ? 'text-red-600 font-bold' : 'text-slate-600';
+                    const painClass = Number(v.painScore) >= 7 ? 'text-red-600 font-bold' : 'text-slate-600';
                     tbody.innerHTML += `
                         <tr class="hover:bg-slate-50 cursor-pointer" onclick="viewVisitDetail(${index})">
                             <td class="p-4 whitespace-nowrap">${v.date}</td>
                             <td class="p-4 max-w-xs truncate">${v.history}</td>
                             <td class="p-4 max-w-xs truncate">${v.regimen}</td>
-                            <td class="p-4 text-center ${painClass}">${v.painScore}</td>
-                            <td class="p-4 text-center text-xs">PPS:${v.pps}% ECOG:${v.ecog}</td>
+                            <td class="p-4 text-center ${painClass}">${v.painScore || '-'}</td>
+                            <td class="p-4 text-center text-xs">PPS:${v.pps || '-'}% ECOG:${v.ecog || '-'}</td>
                             <td class="p-4 text-center">${v.fileUrl ? '📎' : '-'}</td>
                             <td class="p-4 text-xs text-slate-400">${v.recorder}</td>
                         </tr>`;
@@ -498,26 +509,25 @@
         function renderChart(visits) {
             const ctx = document.getElementById('painChart').getContext('2d');
             if(painChartInstance) painChartInstance.destroy();
-            const sorted = [...visits].reverse();
+            const sorted = [...visits].reverse(); // Graph is sorted old -> new
             painChartInstance = new Chart(ctx, {
                 type: 'line',
                 data: {
                     labels: sorted.map(v => v.date.substring(5)),
-                    datasets: [{ label: 'Pain', data: sorted.map(v => v.painScore), borderColor: '#ef4444', backgroundColor: 'rgba(239,68,68,0.1)', fill: true, tension: 0.3 }]
+                    datasets: [{ label: 'Pain', data: sorted.map(v => v.painScore || 0), borderColor: '#ef4444', backgroundColor: 'rgba(239,68,68,0.1)', fill: true, tension: 0.3 }]
                 },
                 options: { responsive: true, maintainAspectRatio: false, scales: { y: { min: 0, max: 10 } } }
             });
         }
 
-        // --- VISIT MODAL & LOGIC ---
         function viewVisitDetail(index) {
             const v = currentVisitsData[index];
             const content = `
                 <div class="grid grid-cols-2 gap-4 border-b pb-4">
                     <div><p class="text-xs text-slate-400">วันที่</p><p class="font-bold text-lg">${v.date}</p></div>
                     <div><p class="text-xs text-slate-400">ผู้บันทึก</p><p>${v.recorder}</p></div>
-                    <div><p class="text-xs text-slate-400">Pain Score</p><p class="font-bold text-red-600 text-xl">${v.painScore}</p></div>
-                    <div><p class="text-xs text-slate-400">Status</p><p>PPS: ${v.pps}% / ECOG: ${v.ecog}</p></div>
+                    <div><p class="text-xs text-slate-400">Pain Score</p><p class="font-bold text-red-600 text-xl">${v.painScore || '-'}</p></div>
+                    <div><p class="text-xs text-slate-400">Status</p><p>PPS: ${v.pps||'-'}% / ECOG: ${v.ecog||'-'}</p></div>
                 </div>
                 <div><p class="font-bold mb-1">อาการสำคัญ</p><div class="bg-slate-50 p-3 rounded border">${v.history || '-'}</div></div>
                 <div><p class="font-bold mb-1">ยา</p><div class="bg-slate-50 p-3 rounded border">${v.regimen || '-'}</div></div>
@@ -533,6 +543,7 @@
                         <p>eGFR: <b>${v.egfr||'-'}</b></p><p>Cr: <b>${v.creatinine||'-'}</b></p><p>Alb: <b>${v.albumin||'-'}</b></p><p>Other: <b>${v.otherLabs||'-'}</b></p>
                     </div>
                 </div>
+                <div class="mt-4"><p class="font-bold mb-1 text-slate-600 text-sm">ระยะเวลาการบริบาล (นาที)</p><div class="bg-slate-50 p-2 text-sm rounded border">${v.notes || '-'}</div></div>
                 ${v.fileUrl ? `<div class="mt-4"><a href="${v.fileUrl}" target="_blank" class="text-blue-600 underline font-bold">📎 เปิดไฟล์แนบ</a></div>` : ''}
             `;
             document.getElementById('viewVisitContent').innerHTML = content;
@@ -545,7 +556,8 @@
             document.querySelectorAll('input[name="drpCheck"]').forEach(c => c.checked = false);
             document.getElementById('visitHnHidden').value = currentPatient.hn;
             document.getElementById('visitDate').value = new Date().toISOString().split('T')[0];
-            document.getElementById('visitPainScore').value = 0; document.getElementById('pv').innerText = '0';
+            document.getElementById('visitPainScore').value = '';
+            document.getElementById('visitECOG').value = '';
             document.getElementById('visitModal').classList.remove('hidden'); document.getElementById('visitModal').classList.add('flex');
         }
         function closeVisitModal() { document.getElementById('visitModal').classList.add('hidden'); document.getElementById('visitModal').classList.remove('flex'); }
@@ -557,6 +569,76 @@
         }
         document.getElementById('v_weight').addEventListener('change', calcBMI);
         document.getElementById('v_height').addEventListener('change', calcBMI);
+
+        // --- ระบบ Print ไฟล์แบบ PDF HTML สวยงาม ---
+        function printVisitPDF(v, p) {
+            const win = window.open('', '_blank');
+            const html = `
+            <!DOCTYPE html>
+            <html lang="th">
+            <head>
+                <meta charset="UTF-8">
+                <title>Visit Note - ${p.hn}</title>
+                <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+                <style>
+                    body { font-family: 'Sarabun', sans-serif; padding: 40px; color: #334155; font-size: 14px; }
+                    .header { text-align: center; margin-bottom: 25px; border-bottom: 2px solid #10b981; padding-bottom: 15px; }
+                    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px; }
+                    .box { background: #f8fafc; border: 1px solid #e2e8f0; padding: 15px; border-radius: 8px; }
+                    .label { font-weight: bold; color: #0f766e; font-size: 0.95em; margin-bottom: 5px; display: block; border-bottom: 1px dashed #cbd5e1; padding-bottom: 3px; }
+                    .val { font-size: 1em; line-height: 1.5; margin-top: 5px; display: block; white-space: pre-wrap; }
+                    .full { grid-column: span 2; }
+                    .vital-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 5px; }
+                    @media print { body { padding: 0; background: white; } .box { border-color: #cbd5e1; page-break-inside: avoid; } }
+                </style>
+            </head>
+            <body>
+                <div class="header">
+                    <h2 style="margin:0; color:#047857; font-size: 22px;">บันทึกการดูแลผู้ป่วยแบบประคับประคอง (Palliative Care Visit Note)</h2>
+                    <p style="margin:5px 0 0 0; color:#64748b; font-size: 16px;">โรงพยาบาลนพรัตนราชธานี</p>
+                </div>
+                
+                <div class="grid">
+                    <div class="box"><span class="label">ข้อมูลผู้ป่วย</span><span class="val"><b>HN:</b> ${p.hn}<br><b>ชื่อ-สกุล:</b> ${p.fname} ${p.lname}<br><b>การวินิจฉัย (Dx):</b> ${p.diagnosis || '-'}</span></div>
+                    <div class="box"><span class="label">ข้อมูลการเยี่ยม</span><span class="val"><b>วันที่:</b> ${v.date}<br><b>ผู้บันทึก:</b> ${v.recorder}</span></div>
+                    
+                    <div class="box full"><span class="label">1. อาการสำคัญ (PC symptom)</span><span class="val">${v.history || '-'}</span></div>
+                    <div class="box full"><span class="label">2. ประวัติยาล่าสุด (Medicine)</span><span class="val">${v.regimen || '-'}</span></div>
+                    
+                    <div class="box full"><span class="label">3. ปัญหาจากการใช้ยา (DRPs)</span><span class="val">${v.drpList || '-'} <br><span style="color:#64748b; font-size: 0.9em;">(Note: ${v.drpNote || '-'})</span></span></div>
+                    
+                    <div class="box"><span class="label">4. การแก้ไขและป้องกันปัญหา</span><span class="val">${v.intervention || '-'}</span></div>
+                    <div class="box"><span class="label">5. แผนการรักษา</span><span class="val">${v.outcome || '-'}</span></div>
+                    
+                    <div class="box full">
+                        <span class="label">สัญญาณชีพ / ผลแลป</span>
+                        <div class="vital-grid">
+                            <div><b>Pain:</b> ${v.painScore || '-'}</div>
+                            <div><b>PPS:</b> ${v.pps ? v.pps+'%' : '-'}</div>
+                            <div><b>ECOG:</b> ${v.ecog || '-'}</div>
+                            <div><b>BP:</b> ${v.bp || '-'}</div>
+                            <div><b>Pulse:</b> ${v.pulse || '-'}</div>
+                            <div><b>O2:</b> ${v.o2 || '-'}</div>
+                            <div><b>Weight:</b> ${v.weight || '-'}</div>
+                            <div><b>BMI:</b> ${v.bmi || '-'}</div>
+                        </div>
+                        <div style="margin-top:10px; font-size: 0.9em;">
+                            <b>eGFR:</b> ${v.egfr || '-'} | <b>Cr:</b> ${v.creatinine || '-'} | <b>Alb:</b> ${v.albumin || '-'} | <b>Other Labs:</b> ${v.otherLabs || '-'}
+                        </div>
+                    </div>
+                    
+                    <div class="box full"><span class="label">ระยะเวลาการบริบาล (นาที)</span><span class="val">${v.notes || '-'}</span></div>
+                </div>
+                
+                <script>
+                    window.onload = () => { setTimeout(() => { window.print(); }, 500); }
+                <\/script>
+            </body>
+            </html>
+            `;
+            win.document.write(html);
+            win.document.close();
+        }
 
         async function saveVisit() {
             Swal.showLoading();
@@ -588,19 +670,44 @@
                 weight: document.getElementById('v_weight').value, height: document.getElementById('v_height').value, bmi: document.getElementById('v_bmi').value,
                 egfr: document.getElementById('l_egfr').value, creatinine: document.getElementById('l_cr').value, protein: document.getElementById('l_prot').value,
                 albumin: document.getElementById('l_alb').value, ast: document.getElementById('l_ast').value, alt: document.getElementById('l_alt').value, otherLabs: document.getElementById('l_other').value,
-                notes: document.getElementById('visitNotes').value,
+                notes: document.getElementById('visitNotes').value, // ระยะเวลาการบริบาล (นาที)
                 recorder: currentUser.name,
                 fileData: fileData, fileName: fileName
             };
 
             try {
                 const res = await fetchAPI('addVisit', payload);
-                if(res.success) { Swal.fire({ icon:'success', title:'บันทึกสำเร็จ', timer:1500, showConfirmButton:false }); closeVisitModal(); selectPatient(currentPatient); }
+                if(res.success) { 
+                    // อัพเกรด 4: Popup สวยงาม 2 ปุ่ม
+                    Swal.fire({ 
+                        icon: 'success', 
+                        title: 'บันทึกข้อมูลเรียบร้อย', 
+                        showCancelButton: true,
+                        confirmButtonText: '🖨️ Print PDF',
+                        cancelButtonText: '🔄 ทำรายการใหม่',
+                        confirmButtonColor: '#10b981',
+                        cancelButtonColor: '#3b82f6',
+                        allowOutsideClick: false
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            printVisitPDF(payload, currentPatient);
+                            closeVisitModal(); 
+                            selectPatient(currentPatient); // รีโหลดข้อมูลตาราง
+                        } else {
+                            // กดทำรายการใหม่ (ล้างฟอร์มแล้วอยู่หน้าเดิม)
+                            document.getElementById('visitForm').reset();
+                            document.querySelectorAll('input[name="drpCheck"]').forEach(c => c.checked = false);
+                            document.getElementById('visitDate').value = new Date().toISOString().split('T')[0];
+                            document.getElementById('visitPainScore').value = '';
+                            document.getElementById('visitECOG').value = '';
+                            selectPatient(currentPatient); // รีโหลดข้อมูลเผื่อแสดงในกราฟ
+                        }
+                    });
+                }
                 else Swal.fire('Error', res.message, 'error');
             } catch(e) { Swal.fire('Error', e.message, 'error'); }
         }
 
-        // --- DASHBOARD & OVERALL ---
         async function loadOverallData() {
             const tbody = document.getElementById('overallTableBody');
             tbody.innerHTML = '<tr><td colspan="6" class="p-8 text-center text-slate-400">Loading...</td></tr>';
@@ -608,7 +715,8 @@
                 const res = await fetchAPI('getAllVisits');
                 tbody.innerHTML = '';
                 res.data.slice(0, 100).forEach(v => {
-                    tbody.innerHTML += `<tr class="border-b"><td class="p-4">${v.date}</td><td class="p-4 text-slate-500">${v.hn}</td><td class="p-4 font-bold text-emerald-600 cursor-pointer" onclick="jumpToPatient('${v.hn}')">${v.patientName}</td><td class="p-4 truncate max-w-xs">${v.history}</td><td class="p-4 text-center ${v.painScore>=7?'text-red-600 font-bold':''}">${v.painScore}</td><td class="p-4 text-xs">${v.recorder}</td></tr>`;
+                    const painClass = Number(v.painScore) >= 7 ? 'text-red-600 font-bold' : '';
+                    tbody.innerHTML += `<tr class="border-b"><td class="p-4">${v.date}</td><td class="p-4 text-slate-500">${v.hn}</td><td class="p-4 font-bold text-emerald-600 cursor-pointer" onclick="jumpToPatient('${v.hn}')">${v.patientName}</td><td class="p-4 truncate max-w-xs">${v.history}</td><td class="p-4 text-center ${painClass}">${v.painScore || '-'}</td><td class="p-4 text-xs">${v.recorder}</td></tr>`;
                 });
                 window.allVisitsData = res.data; 
             } catch(e){}
@@ -619,18 +727,17 @@
             document.getElementById('statTotalPatients').innerText = allPatients.length;
             const visits = window.allVisitsData || [];
             document.getElementById('statTotalVisits').innerText = visits.filter(v => new Date(v.date).getMonth() === new Date().getMonth()).length;
-            document.getElementById('statHighPain').innerText = visits.filter(v=>v.painScore>=7).length;
+            document.getElementById('statHighPain').innerText = visits.filter(v=>Number(v.painScore)>=7).length;
             
             const ctx = document.getElementById('dashboardChart').getContext('2d');
             if(dashChartInstance) dashChartInstance.destroy();
             dashChartInstance = new Chart(ctx, {
                 type: 'bar',
-                data: { labels: ['Total', 'High Pain'], datasets: [{ label: 'Cases', data: [visits.length, visits.filter(v=>v.painScore>=7).length], backgroundColor: ['#10b981', '#ef4444'] }] },
+                data: { labels: ['Total', 'High Pain (>7)'], datasets: [{ label: 'Cases', data: [visits.length, visits.filter(v=>Number(v.painScore)>=7).length], backgroundColor: ['#10b981', '#ef4444'] }] },
                 options: { responsive: true, maintainAspectRatio: false }
             });
         }
 
-        // --- EDIT ---
         function loadPatientForEdit() {
             const hn = document.getElementById('editSearchHN').value;
             const p = allPatients.find(x=>x.hn===hn);
@@ -644,7 +751,6 @@
                 document.getElementById('edit_diagnosis').value = p.diagnosis;
                 document.getElementById('edit_comorbidities').value = p.comorbidities;
                 document.getElementById('edit_historySummary').value = p.historySummary;
-                // Add Edit New Fields
                 document.getElementById('edit_dob').value = p.dob || '';
                 document.getElementById('edit_baselinePPS').value = p.baselinePPS || '';
             } else Swal.fire('ไม่พบ HN', '', 'warning');
@@ -658,7 +764,6 @@
             } catch(e){}
         });
 
-        // --- REPORT (UPGRADED WORD TABLE) ---
         async function exportReport(type) {
             const start = document.getElementById('rptStart').value;
             const end = document.getElementById('rptEnd').value;
@@ -668,7 +773,6 @@
             
             if(res.success && res.data.length > 0) {
                 if(type === 'excel') {
-                    // Excel Logic (Keep Simple)
                     const simpleData = res.data.map(d => ({
                         'Date': d.date, 'HN': d.hn, 'Name': d.patientName,
                         'PC Symptom': d.history, 'Medicine': d.regimen,
@@ -681,10 +785,8 @@
                     XLSX.utils.book_append_sheet(wb, ws, "Report");
                     XLSX.writeFile(wb, `Report.xlsx`);
                 } else {
-                    // WORD Logic (Upgraded Table Structure)
                     let tableRows = '';
                     res.data.forEach(d => {
-                        // Create Labs String
                         let labStr = '';
                         if(d.bp) labStr += `BP:${d.bp} `;
                         if(d.pulse) labStr += `P:${d.pulse} `;
@@ -703,9 +805,9 @@
                             <td style="padding:5px;">${d.outcome || '-'}</td>
                             <td style="padding:5px; font-size:10pt;">${labStr}</td>
                             <td style="padding:5px;">${d.notes || '-'}</td>
-                            <td style="padding:5px; text-align:center;">${d.painScore}</td>
-                            <td style="padding:5px; text-align:center;">${d.pps}%</td>
-                            <td style="padding:5px; text-align:center;">${d.ecog}</td>
+                            <td style="padding:5px; text-align:center;">${d.painScore || '-'}</td>
+                            <td style="padding:5px; text-align:center;">${d.pps ? d.pps+'%' : '-'}</td>
+                            <td style="padding:5px; text-align:center;">${d.ecog || '-'}</td>
                         </tr>`;
                     });
 
@@ -730,7 +832,7 @@
                                     <th width="10%">การแก้ไข</th>
                                     <th width="10%">แผนการรักษา</th>
                                     <th width="10%">Vitals/Lab</th>
-                                    <th width="5%">หมายเหตุ</th>
+                                    <th width="5%">ระยะเวลาการบริบาล (นาที)</th>
                                     <th width="5%">Pain</th>
                                     <th width="5%">PPS</th>
                                     <th width="5%">ECOG</th>
