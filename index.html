@@ -372,14 +372,28 @@
 
     <script>
         // ********************************************************************************
-        // ⚠️ ใส่ URL Web App ของคุณที่นี่
+        // ⚠️ ใส่ URL Web App อันใหม่ล่าสุดของคุณที่นี่
         // ********************************************************************************
-        const API_URL = 'https://script.google.com/macros/s/AKfycbz6_mEzKjsSMHuol_k8SJvXwuFxLAm4oeaj_2YxBL-KJufYB5pKSO3Zj8U_ETDlkfjo/exec'; 
+        const API_URL = 'https://script.google.com/macros/s/AKfycbzaLP0t78hBiG2cHwCIjnSzjPa2s7aDdRnEDY6-B2UiWdfTCUQ-eGTshot2YxrAnVmB/exec'; 
 
+        // --- แก้ไขปัญหา CORS ตรงส่วนนี้ครับ ---
         async function fetchAPI(action, data = {}) {
-            const options = { method: 'POST', body: JSON.stringify({ action, ...data }) };
-            try { return JSON.parse(await (await fetch(API_URL, options)).text()); } 
-            catch (e) { console.error(e); throw e; }
+            const options = { 
+                method: 'POST', 
+                headers: {
+                    'Content-Type': 'text/plain;charset=utf-8' // สำคัญมาก สำหรับข้าม CORS บน Google Apps Script
+                },
+                body: JSON.stringify({ action, ...data }),
+                redirect: 'follow' // สำคัญมาก เพื่อให้รองรับการ Redirect ของฝั่ง Google
+            };
+            try { 
+                const response = await fetch(API_URL, options);
+                return JSON.parse(await response.text()); 
+            } 
+            catch (e) { 
+                console.error('Fetch Error:', e); 
+                throw e; 
+            }
         }
 
         let currentUser = null, currentPatient = null, allPatients = [], painChartInstance = null, dashChartInstance = null;
@@ -412,7 +426,7 @@
                     document.getElementById('mainApp').classList.add('flex');
                     loadAllPatients(); switchTab('dashboard');
                 } else Swal.fire('Error', res.message, 'error');
-            } catch (err) { Swal.fire('Error', 'Connection Error', 'error'); } 
+            } catch (err) { Swal.fire('Error', 'ไม่สามารถเชื่อมต่อฐานข้อมูลได้ กรุณาตรวจสอบ URL หรือการตั้งค่า CORS', 'error'); } 
             finally { btn.disabled = false; btn.querySelector('span').classList.remove('hidden'); loader.classList.add('hidden'); }
         });
 
@@ -509,7 +523,7 @@
         function renderChart(visits) {
             const ctx = document.getElementById('painChart').getContext('2d');
             if(painChartInstance) painChartInstance.destroy();
-            const sorted = [...visits].reverse(); // Graph is sorted old -> new
+            const sorted = [...visits].reverse();
             painChartInstance = new Chart(ctx, {
                 type: 'line',
                 data: {
@@ -570,7 +584,6 @@
         document.getElementById('v_weight').addEventListener('change', calcBMI);
         document.getElementById('v_height').addEventListener('change', calcBMI);
 
-        // --- ระบบ Print ไฟล์แบบ PDF HTML สวยงาม ---
         function printVisitPDF(v, p) {
             const win = window.open('', '_blank');
             const html = `
@@ -670,7 +683,7 @@
                 weight: document.getElementById('v_weight').value, height: document.getElementById('v_height').value, bmi: document.getElementById('v_bmi').value,
                 egfr: document.getElementById('l_egfr').value, creatinine: document.getElementById('l_cr').value, protein: document.getElementById('l_prot').value,
                 albumin: document.getElementById('l_alb').value, ast: document.getElementById('l_ast').value, alt: document.getElementById('l_alt').value, otherLabs: document.getElementById('l_other').value,
-                notes: document.getElementById('visitNotes').value, // ระยะเวลาการบริบาล (นาที)
+                notes: document.getElementById('visitNotes').value,
                 recorder: currentUser.name,
                 fileData: fileData, fileName: fileName
             };
@@ -678,7 +691,6 @@
             try {
                 const res = await fetchAPI('addVisit', payload);
                 if(res.success) { 
-                    // อัพเกรด 4: Popup สวยงาม 2 ปุ่ม
                     Swal.fire({ 
                         icon: 'success', 
                         title: 'บันทึกข้อมูลเรียบร้อย', 
@@ -692,15 +704,14 @@
                         if (result.isConfirmed) {
                             printVisitPDF(payload, currentPatient);
                             closeVisitModal(); 
-                            selectPatient(currentPatient); // รีโหลดข้อมูลตาราง
+                            selectPatient(currentPatient); 
                         } else {
-                            // กดทำรายการใหม่ (ล้างฟอร์มแล้วอยู่หน้าเดิม)
                             document.getElementById('visitForm').reset();
                             document.querySelectorAll('input[name="drpCheck"]').forEach(c => c.checked = false);
                             document.getElementById('visitDate').value = new Date().toISOString().split('T')[0];
                             document.getElementById('visitPainScore').value = '';
                             document.getElementById('visitECOG').value = '';
-                            selectPatient(currentPatient); // รีโหลดข้อมูลเผื่อแสดงในกราฟ
+                            selectPatient(currentPatient); 
                         }
                     });
                 }
